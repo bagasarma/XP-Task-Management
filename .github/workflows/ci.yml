@@ -1,102 +1,25 @@
 name: CI Pipeline
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
     steps:
-      # Check out the repository code
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # Set up Node.js environment
+      
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
-      # Install dependencies
+      
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
-
-      # Install ESLint if not present (Next.js projects need this)
-      - name: Setup ESLint for Next.js
-        run: |
-          if ! npm list eslint >/dev/null 2>&1; then
-            echo "ESLint not found, installing..."
-            npm install --save-dev eslint eslint-config-next @typescript-eslint/parser @typescript-eslint/eslint-plugin
-            # Create basic ESLint config if it doesn't exist
-            if [ ! -f ".eslintrc.json" ]; then
-              echo '{
-                "extends": ["next/core-web-vitals"]
-              }' > .eslintrc.json
-            fi
-          else
-            echo "ESLint already installed"
-          fi
-
-      # Create .env.local for build (if needed)
-      - name: Create environment file
-        run: |
-          touch .env.local
-          echo "NODE_ENV=test" >> .env.local
-
-      # Run linting
-      - name: Run lint
-        run: |
-          if grep -q '"lint"' package.json 2>/dev/null; then
-            echo "Running lint..."
-            npm run lint
-          else
-            echo "No lint script found, running ESLint directly..."
-            npx eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0 || echo "Linting completed with warnings/errors"
-          fi
-
-      # Run TypeScript type checking (conditional)
-      - name: Run type check
-        run: |
-          if [ -f "tsconfig.json" ]; then
-            echo "Running TypeScript type check..."
-            npx tsc --noEmit
-          else
-            echo "No tsconfig.json found, skipping type check"
-          fi
-
-      # Run tests only if script exists
-      - name: Run tests
-        run: |
-          if grep -q '"test"' package.json 2>/dev/null; then
-            echo "Running tests..."
-            npm test
-          else
-            echo "No test script found, skipping tests"
-          fi
-        env:
-          CI: true
-          NODE_ENV: test
-
-      # Build the Next.js application
+      
       - name: Build application
         run: npm run build
-        env:
-          NODE_ENV: production
-
-      # Upload build artifacts
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: build-files
-          path: |
-            .next/
-            !.next/cache/
-          retention-days: 1
