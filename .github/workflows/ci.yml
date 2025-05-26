@@ -36,16 +36,25 @@ jobs:
           # Add other environment variables if needed
           # echo "DATABASE_URL=your_test_db_url" >> .env.local
 
-      # Run linting (with error handling)
+      # Check available scripts and run linting if exists
+      - name: Check package.json scripts
+        run: |
+          echo "Checking available scripts in package.json..."
+          if [ -f "package.json" ]; then
+            cat package.json | jq '.scripts // {}' || echo "No jq available, checking manually"
+            grep -A 10 '"scripts"' package.json || echo "No scripts section found"
+          else
+            echo "No package.json found"
+          fi
+
+      # Run linting only if script exists
       - name: Run lint
         run: |
-          if npm run lint 2>/dev/null; then
-            echo "Linting passed"
+          if grep -q '"lint"' package.json 2>/dev/null; then
+            echo "Lint script found, running..."
+            npm run lint
           else
-            echo "Linting failed or lint script not found"
-            echo "Available scripts:"
-            npm run --silent 2>/dev/null || echo "No scripts available"
-            exit 1
+            echo "No lint script found in package.json, skipping..."
           fi
 
       # Run TypeScript type checking (conditional)
@@ -57,13 +66,14 @@ jobs:
             echo "No tsconfig.json found, skipping type check"
           fi
 
-      # Run tests (conditional)
+      # Run tests only if script exists
       - name: Run tests
         run: |
-          if npm run test --silent 2>/dev/null; then
+          if grep -q '"test"' package.json 2>/dev/null; then
+            echo "Test script found, running..."
             npm test
           else
-            echo "No test script found, skipping tests"
+            echo "No test script found in package.json, skipping..."
           fi
         env:
           CI: true
