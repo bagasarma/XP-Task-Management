@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Install ESLint
+        run: npm install --save-dev eslint
+      
       # Run linting
       - name: Run lint
         run: npm run lint
